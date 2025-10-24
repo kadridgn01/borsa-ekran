@@ -59,6 +59,7 @@
         .panel-content {
             padding: 10px;
             overflow-y: auto; /* Gerektiğinde kaydırma çubuğu */
+            flex-grow: 1; /* Panelin kalanını doldur */
         }
         
         /* --- ALANLARI GRID'E YERLEŞTİRME --- */
@@ -123,11 +124,30 @@
         
         /* --- 3. ORTA: GRAFİK ALANI --- */
         #chart .panel-content {
-            background-image: url('https://i.imgur.com/8vQJ8yE.png'); /* Statik grafik görseli */
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px; /* SVG için biraz boşluk */
         }
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .chart-svg .grid {
+            stroke: #444; /* Izgara çizgileri */
+            stroke-dasharray: 2, 2;
+        }
+        .chart-svg .line-up {
+            stroke: var(--color-up); /* Yeşil çizgi */
+            stroke-width: 2;
+            fill: none;
+        }
+        .chart-svg .line-down {
+            stroke: var(--color-down); /* Kırmızı çizgi */
+            stroke-width: 2;
+            fill: none;
+        }
+
 
         /* --- 4. SAĞ ÜST: ENDEKSLER --- */
         #indices .panel-content {
@@ -268,7 +288,20 @@
         <div id="chart" class="panel">
             <div class="panel-header">Euro/Dolar Grafiği</div>
             <div class="panel-content">
-                </div>
+                <svg class="chart-svg" viewBox="0 0 500 200" preserveAspectRatio="xMidYMid meet">
+                    <line class="grid" x1="0" y1="50" x2="500" y2="50"></line>
+                    <line class="grid" x1="0" y1="100" x2="500" y2="100"></line>
+                    <line class="grid" x1="0" y1="150" x2="500" y2="150"></line>
+                    <polyline class="line-up" points="
+                        0,110 50,100 100,120 150,90 200,80 250,100
+                        300,110 350,95 400,115 450,105 500,120
+                    "></polyline>
+                    <polyline class="line-down" points="
+                        0,90 50,85 100,100 150,80 200,75 250,90
+                        300,100 350,80 400,100 450,90 500,100
+                    "></polyline>
+                </svg>
+            </div>
         </div>
 
         <div id="indices" class="panel">
@@ -344,7 +377,13 @@
             const decimals = (basePrice.toString().split('.')[1] || '').length;
             priceElement.textContent = newPrice.toFixed(decimals);
             
-            changeElement.textContent = `${percentChange.toFixed(2)}%`;
+            // Yüzde değişimini formatla
+            let changeText = `${percentChange.toFixed(2)}%`;
+            if (percentChange > 0) {
+                changeText = `+${changeText}`;
+            }
+
+            changeElement.textContent = changeText;
             
             // Renkleri ve animasyonları ayarla
             item.classList.remove('flash-up', 'flash-down');
