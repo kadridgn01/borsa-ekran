@@ -3,45 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Çoklu Grafik Terminali</title>
+    <title>Gelişmiş Terminal</title>
     <style>
         :root {
-            --bg-color: #131722;       /* TradingView Koyu Arka Plan */
-            --panel-bg: #1e222d;      /* Panel Arka Planı */
+            --bg-color: #131722;
+            --panel-bg: #1e222d;
             --border-color: #363a45;
             --text-color: #d1d4dc;
             --text-muted: #787b86;
-            --color-up: #26a69a;      /* Yeşil */
-            --color-down: #ef5350;    /* Kırmızı */
+            --color-up: #26a69a;
+            --color-down: #ef5350;
             --color-up-bg: rgba(38, 166, 154, 0.2);
             --color-down-bg: rgba(239, 83, 80, 0.2);
+            --color-bid: var(--color-up);
+            --color-ask: var(--color-down);
         }
 
-        body {
+        html, body {
+            height: 100%;
+            margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            padding: 8px;
-            overflow: hidden; /* Kaydırma çubuklarını gizle */
+            overflow: hidden;
         }
 
-        /* --- ANA EKRAN DÜZENİ (GRID) --- */
+        /* --- ANA ARAYÜZ YAPISI --- */
+        .terminal-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- 1. ÜST TOOLBAR --- */
+        .terminal-toolbar {
+            flex-shrink: 0;
+            height: 40px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 15px;
+        }
+        .toolbar-group .btn {
+            padding: 5px 8px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #2a2e39;
+            margin-right: 5px;
+        }
+        .toolbar-group .btn.active {
+            background: #5c9cf6;
+            color: #fff;
+        }
+
+        /* --- 2. ANA İÇERİK ALANI (GRAFİKLER + SIDEBAR) --- */
         .main-container {
+            flex-grow: 1;
             display: grid;
-            height: calc(100vh - 16px); /* Ekranı kapla (padding'i çıkar) */
             grid-template-columns: 1fr 320px; /* Grafik Alanı | Sağ Sidebar */
-            grid-template-areas: "charts sidebar";
             gap: 8px;
+            padding: 8px;
+            overflow: hidden;
         }
 
-        /* --- 1. GRAFİK ALANI (KENDİ İÇİNDE 2x2 GRID) --- */
+        /* --- 2a. GRAFİK ALANI (2x2 GRID) --- */
         .chart-grid-container {
-            grid-area: charts;
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
             gap: 8px;
+            min-height: 0;
         }
 
         .chart-panel {
@@ -54,6 +88,7 @@
         }
 
         .chart-header {
+            flex-shrink: 0;
             padding: 10px 12px;
             font-weight: 600;
             color: var(--text-color);
@@ -63,91 +98,110 @@
 
         .chart-content {
             flex-grow: 1;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: relative;
         }
         
-        /* --- GRAFİK SVG STİLLERİ --- */
         .chart-svg {
             width: 100%;
             height: 100%;
+            position: absolute;
         }
-        .chart-svg .grid-line {
-            stroke: #2a2e39; /* Soluk ızgara çizgisi */
-        }
-        .chart-svg .line-purple {
-            stroke: #884eff; /* Mor çizgi */
-            stroke-width: 2;
-            fill: none;
-        }
-        .chart-svg .line-red {
-            stroke: var(--color-down); /* Kırmızı çizgi */
-            stroke-width: 1.5;
-            fill: none;
-        }
+        .chart-svg .grid-line { stroke: #2a2e39; stroke-width: 0.5; }
+        .chart-svg .axis-text { font-size: 10px; fill: var(--text-muted); }
+        .chart-svg .line-purple { stroke: #884eff; stroke-width: 2; fill: none; }
+        .chart-svg .line-red { stroke: var(--color-down); stroke-width: 1.5; fill: none; }
 
-        /* --- 2. SAĞ SIDEBAR (İZLEME LİSTESİ) --- */
-        .sidebar {
-            grid-area: sidebar;
+        /* --- 2b. SAĞ SIDEBAR (KENDİ İÇİNDE GRID) --- */
+        .sidebar-container {
+            display: grid;
+            grid-template-rows: 45% 25% 30%; /* İzleme Listesi | Derinlik | Akış */
+            gap: 8px;
+            min-height: 0;
+        }
+        
+        .panel {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        .sidebar-header {
+        .panel-header {
+            flex-shrink: 0;
             padding: 10px 12px;
             font-weight: 600;
             color: var(--text-color);
             border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
             text-align: center;
         }
 
-        .watchlist-table {
-            width: 100%;
-            border-collapse: collapse;
+        .panel-content {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 0;
         }
         
+        /* Sidebardaki paneller için scrollbar stili */
+        .panel-content::-webkit-scrollbar { width: 5px; }
+        .panel-content::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+        .panel-content::-webkit-scrollbar-track { background: transparent; }
+
+        /* İzleme Listesi */
+        .watchlist-table { width: 100%; border-collapse: collapse; }
         .watchlist-table th {
-            font-size: 12px;
-            color: var(--text-muted);
-            padding: 10px 8px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
+            font-size: 11px; color: var(--text-muted); padding: 8px 6px; text-align: left;
+            border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--panel-bg);
         }
-        
-        .watchlist-table th.col-price { text-align: right; }
-        .watchlist-table th.col-change { text-align: right; padding-right: 12px; }
+        .watchlist-table th.col-right { text-align: right; }
         
         .watchlist-item td {
-            padding: 9px 8px;
-            border-bottom: 1px solid #2a2e39;
-            vertical-align: middle;
-            font-size: 14px;
+            padding: 7px 6px; border-bottom: 1px solid #2a2e39; font-size: 13px;
         }
-        
-        .watchlist-item .symbol {
-            font-weight: 600;
-            color: #5c9cf6; /* Mavi sembol adı */
+        .watchlist-item .symbol { font-weight: 600; color: #5c9cf6; }
+        .watchlist-item .price { text-align: right; font-weight: 500; }
+        .watchlist-item .change { text-align: right; font-weight: 600; }
+
+        /* Piyasa Derinliği */
+        .depth-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .depth-table th {
+            font-size: 11px; color: var(--text-muted); padding: 8px 6px;
+            border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--panel-bg);
         }
-        .watchlist-item .price {
-            text-align: right;
-            font-weight: 500;
+        .depth-table td { padding: 4px 6px; text-align: right; }
+        .depth-bid { color: var(--color-bid); }
+        .depth-ask { color: var(--color-ask); }
+
+        /* Haber Akışı */
+        .feed-content { padding: 10px; }
+        .feed-item { margin-bottom: 12px; }
+        .feed-item .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+        .feed-item .meta .author { font-weight: 600; color: #4fc3f7; }
+        .feed-item .text { font-size: 13px; line-height: 1.4; }
+
+        /* --- 3. ALT STATUSBAR --- */
+        .terminal-statusbar {
+            flex-shrink: 0;
+            height: 30px;
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 15px;
+            font-size: 12px;
+            color: var(--text-muted);
         }
-        .watchlist-item .change {
-            text-align: right;
-            padding-right: 12px;
-            font-weight: 600;
+        .status-light {
+            width: 10px; height: 10px; background-color: var(--color-up);
+            border-radius: 50%; margin-right: 8px;
         }
 
-        /* --- ARTIŞ/AZALIŞ RENKLERİ --- */
+        /* --- GENEL ANİMASYON VE RENKLER --- */
         .up { color: var(--color-up); }
         .down { color: var(--color-down); }
-        
-        /* --- ANİMASYONLU PARLAMA EFEKTİ --- */
         .flash-up { animation: flash-green 0.7s ease-out; }
         .flash-down { animation: flash-red 0.7s ease-out; }
         
@@ -164,127 +218,198 @@
 </head>
 <body>
 
-    <div class="main-container">
+    <div class="terminal-wrapper">
 
-        <div class="chart-grid-container">
+        <div class="terminal-toolbar">
+            <div class="toolbar-group">
+                <span class="btn active">1G</span>
+                <span class="btn">1S</span>
+                <span class="btn">1A</span>
+                <span class="btn">3A</span>
+            </div>
+            <div class="toolbar-group">
+                <span class="btn">fx</span>
+                <span class="btn">Mumlar</span>
+            </div>
+        </div>
 
-            <div class="chart-panel">
-                <div class="chart-header">BIST 100 Endeksi - 1G</div>
-                <div class="chart-content">
-                    <svg class="chart-svg" viewBox="0 0 200 100">
-                        <line class="grid-line" x1="0" y1="25" x2="200" y2="25"></line>
-                        <line class="grid-line" x1="0" y1="50" x2="200" y2="50"></line>
-                        <line class="grid-line" x1="0" y1="75" x2="200" y2="75"></line>
-                        <polyline class="line-red" points="0,30 20,40 40,35 60,50 80,45 100,60 120,70 140,65 160,80 180,75 200,90"></polyline>
-                        <polyline class="line-purple" points="0,25 20,35 40,30 60,45 80,40 100,55 120,65 140,60 160,75 180,70 200,85"></polyline>
-                    </svg>
+        <div class="main-container">
+
+            <div class="chart-grid-container">
+                <div class="chart-panel">
+                    <div class="chart-header">BIST 100 Endeksi - 1G</div>
+                    <div class="chart-content">
+                        <svg class="chart-svg" viewBox="0 0 300 150" preserveAspectRatio="none">
+                            <line class="grid-line" x1="0" y1="30" x2="300" y2="30"></line>
+                            <text class="axis-text" x="275" y="34">10.000</text>
+                            <line class="grid-line" x1="0" y1="60" x2="300" y2="60"></line>
+                            <text class="axis-text" x="275" y="64">9.500</text>
+                            <line class="grid-line" x1="0" y1="90" x2="300" y2="90"></line>
+                            <text class="axis-text" x="275" y="94">9.000</text>
+                            <line class="grid-line" x1="0" y1="120" x2="300" y2="120"></line>
+                            <text class="axis-text" x="275" y="124">8.500</text>
+                            <line class="grid-line" x1="50" y1="0" x2="50" y2="150"></line>
+                            <text class="axis-text" x="45" y="145">Eyl</text>
+                            <line class="grid-line" x1="100" y1="0" x2="100" y2="150"></line>
+                            <text class="axis-text" x="95" y="145">Eki</text>
+                            <line class="grid-line" x1="150" y1="0" x2="150" y2="150"></line>
+                            <text class="axis-text" x="145" y="145">Kas</text>
+                            <line class="grid-line" x1="200" y1="0" x2="200" y2="150"></line>
+                            <text class="axis-text" x="195" y="145">Ara</text>
+                            <line class="grid-line" x1="250" y1="0" x2="250" y2="150"></line>
+                            <text class="axis-text" x="245" y="145">Oca</text>
+                            <polyline class="line-red" points="0,30 20,40 40,35 60,50 80,45 100,60 120,70 140,65 160,80 180,75 200,90 220,100 240,95 260,110 280,105 300,120"></polyline>
+                            <polyline class="line-purple" points="0,25 20,35 40,30 60,45 80,40 100,55 120,65 140,60 160,75 180,70 200,85 220,95 240,90 260,105 280,100 300,115"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-header">S&P 500 - 1G</div>
+                    <div class="chart-content">
+                        <svg class="chart-svg" viewBox="0 0 300 150" preserveAspectRatio="none">
+                            <line class="grid-line" x1="0" y1="30" x2="300" y2="30"></line><text class="axis-text" x="275" y="34">5.900</text>
+                            <line class="grid-line" x1="0" y1="60" x2="300" y2="60"></line><text class="axis-text" x="275" y="64">5.800</text>
+                            <line class="grid-line" x1="0" y1="90" x2="300" y2="90"></line><text class="axis-text" x="275" y="94">5.700</text>
+                            <line class="grid-line" x1="0" y1="120" x2="300" y2="120"></line><text class="axis-text" x="275" y="124">5.600</text>
+                            <line class="grid-line" x1="50" y1="0" x2="50" y2="150"></line><text class="axis-text" x="45" y="145">Eyl</text>
+                            <line class="grid-line" x1="100" y1="0" x2="100" y2="150"></line><text class="axis-text" x="95" y="145">Eki</text>
+                            <line class="grid-line" x1="150" y1="0" x2="150" y2="150"></line><text class="axis-text" x="145" y="145">Kas</text>
+                            <polyline class="line-red" points="0,60 20,50 40,55 60,40 80,45 100,30 120,20 140,25 160,40 180,35 200,50 220,60 240,55 260,70 280,65 300,80"></polyline>
+                            <polyline class="line-purple" points="0,55 20,45 40,50 60,35 80,40 100,25 120,15 140,20 160,35 180,30 200,45 220,55 240,50 260,65 280,60 300,75"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-header">USD/TRY - 1G</div>
+                    <div class="chart-content">
+                        <svg class="chart-svg" viewBox="0 0 300 150" preserveAspectRatio="none">
+                            <line class="grid-line" x1="0" y1="30" x2="300" y2="30"></line><text class="axis-text" x="275" y="34">40.00</text>
+                            <line class="grid-line" x1="0" y1="60" x2="300" y2="60"></line><text class="axis-text" x="275" y="64">35.00</text>
+                            <line class="grid-line" x1="0" y1="90" x2="300" y2="90"></line><text class="axis-text" x="275" y="94">30.00</text>
+                            <line class="grid-line" x1="0" y1="120" x2="300" y2="120"></line><text class="axis-text" x="275" y="124">25.00</text>
+                            <line class="grid-line" x1="50" y1="0" x2="50" y2="150"></line><text class="axis-text" x="45" y="145">Eyl</text>
+                            <line class="grid-line" x1="100" y1="0" x2="100" y2="150"></line><text class="axis-text" x="95" y="145">Eki</text>
+                            <line class="grid-line" x1="150" y1="0" x2="150" y2="150"></line><text class="axis-text" x="145" y="145">Kas</text>
+                            <polyline class="line-red" points="0,120 20,110 40,115 60,100 80,105 100,90 120,80 140,85 160,70 180,65 200,50 220,40 240,35 260,20 280,15 300,10"></polyline>
+                            <polyline class="line-purple" points="0,115 20,105 40,110 60,95 80,100 100,85 120,75 140,80 160,65 180,60 200,45 220,35 240,30 260,15 280,10 300,5"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-header">ALTIN (ONS) - 1G</div>
+                    <div class="chart-content">
+                        <svg class="chart-svg" viewBox="0 0 300 150" preserveAspectRatio="none">
+                            <line class="grid-line" x1="0" y1="30" x2="300" y2="30"></line><text class="axis-text" x="275" y="34">2800</text>
+                            <line class="grid-line" x1="0" y1="60" x2="300" y2="60"></line><text class="axis-text" x="275" y="64">2700</text>
+                            <line class="grid-line" x1="0" y1="90" x2="300" y2="90"></line><text class="axis-text" x="275" y="94">2600</text>
+                            <line class="grid-line" x1="0" y1="120" x2="300" y2="120"></line><text class="axis-text" x="275" y="124">2500</text>
+                            <line class="grid-line" x1="50" y1="0" x2="50" y2="150"></line><text class="axis-text" x="45" y="145">Eyl</text>
+                            <line class="grid-line" x1="100" y1="0" x2="100" y2="150"></line><text class="axis-text" x="95" y="145">Eki</text>
+                            <line class="grid-line" x1="150" y1="0" x2="150" y2="150"></line><text class="axis-text" x="145" y="145">Kas</text>
+                            <polyline class="line-red" points="0,10 20,20 40,15 60,30 80,25 100,40 120,50 140,45 160,60 180,55 200,70 220,80 240,75 260,90 280,85 300,100"></polyline>
+                            <polyline class="line-purple" points="0,5 20,15 40,10 60,25 80,20 100,35 120,45 140,40 160,55 180,50 200,65 220,75 240,70 260,85 280,80 300,95"></line>
+                        </svg>
+                    </div>
                 </div>
             </div>
 
-            <div class="chart-panel">
-                <div class="chart-header">S&P 500 - 1G</div>
-                <div class="chart-content">
-                    <svg class="chart-svg" viewBox="0 0 200 100">
-                        <line class="grid-line" x1="0" y1="25" x2="200" y2="25"></line>
-                        <line class="grid-line" x1="0" y1="50" x2="200" y2="50"></line>
-                        <line class="grid-line" x1="0" y1="75" x2="200" y2="75"></line>
-                        <polyline class="line-red" points="0,60 20,50 40,55 60,40 80,45 100,30 120,20 140,25 160,40 180,35 200,50"></polyline>
-                        <polyline class="line-purple" points="0,55 20,45 40,50 60,35 80,40 100,25 120,15 140,20 160,35 180,30 200,45"></polyline>
-                    </svg>
+            <div class="sidebar-container">
+                <div class="panel" id="watchlist">
+                    <div class="panel-header">İzleme Listesi</div>
+                    <div class="panel-content">
+                        <table class="watchlist-table">
+                            <thead>
+                                <tr>
+                                    <th>Sembol</th>
+                                    <th class="col-right">Alış</th>
+                                    <th class="col-right">Satış</th>
+                                    <th class="col-right">Değ. %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="watchlist-item" data-price="42.21">
+                                    <td><span class="symbol">DXY</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="39590.65">
+                                    <td><span class="symbol">DJI</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="5837.91">
+                                    <td><span class="symbol">SPX</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="19.80">
+                                    <td><span class="symbol">VIX</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="231.67">
+                                    <td><span class="symbol">AAPL</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="759.44">
+                                    <td><span class="symbol">NFLX</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="259.52">
+                                    <td><span class="symbol">TSLA</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                                <tr class="watchlist-item" data-price="2780.55">
+                                    <td><span class="symbol">GOLD</span></td>
+                                    <td class="price bid">...</td><td class="price ask">...</td>
+                                    <td class="change">...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-
-            <div class="chart-panel">
-                <div class="chart-header">USD/TRY - 1G</div>
-                <div class="chart-content">
-                    <svg class="chart-svg" viewBox="0 0 200 100">
-                        <line class="grid-line" x1="0" y1="25" x2="200" y2="25"></line>
-                        <line class="grid-line" x1="0" y1="50" x2="200" y2="50"></line>
-                        <line class="grid-line" x1="0" y1="75" x2="200" y2="75"></line>
-                        <polyline class="line-red" points="0,80 20,70 40,75 60,60 80,65 100,50 120,40 140,45 160,30 180,25 200,10"></polyline>
-                        <polyline class="line-purple" points="0,75 20,65 40,70 60,55 80,60 100,45 120,35 140,40 160,25 180,20 200,5"></polyline>
-                    </svg>
+                <div class="panel" id="market-depth">
+                    <div class="panel-header">Piyasa Derinliği (XU100)</div>
+                    <div class="panel-content">
+                        <table class="depth-table">
+                            <thead>
+                                <tr>
+                                    <th>Miktar</th><th class="depth-bid">Alış</th>
+                                    <th class="depth-ask">Satış</th><th>Miktar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="depth-body">
+                                </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-
-            <div class="chart-panel">
-                <div class="chart-header">ALTIN (ONS) - 1G</div>
-                <div class="chart-content">
-                    <svg class="chart-svg" viewBox="0 0 200 100">
-                        <line class="grid-line" x1="0" y1="25" x2="200" y2="25"></line>
-                        <line class="grid-line" x1="0" y1="50" x2="200" y2="50"></line>
-                        <line class="grid-line" x1="0" y1="75" x2="200" y2="75"></line>
-                        <polyline class="line-red" points="0,10 20,20 40,15 60,30 80,25 100,40 120,50 140,45 160,60 180,55 200,70"></polyline>
-                        <polyline class="line-purple" points="0,5 20,15 40,10 60,25 80,20 100,35 120,45 140,40 160,55 180,50 200,65"></polyline>
-                    </svg>
+                <div class="panel" id="feed">
+                    <div class="panel-header">Yorum & Akış</div>
+                    <div class="panel-content feed-content">
+                        <div class="feed-item">
+                            <div class="meta"><span class="author">ASIVEMAVI</span> - 13:28</div>
+                            <div class="text">Demokratlar meclisi alıyor...</div>
+                        </div>
+                        <div class="feed-item">
+                            <div class="meta"><span class="author">Yatırımcı</span> - 13:25</div>
+                            <div class="text">Piyasalarda, sade vatandaşın gözünden...</div>
+                        </div>
+                        <div class="feed-item">
+                            <div class="meta"><span class="author">Analist</span> - 13:22</div>
+                            <div class="text">Teknik olarak 9.980 desteği önemli.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
         </div>
 
-        <div class="sidebar">
-            <div class="sidebar-header">İzleme Listesi</div>
-            <table class="watchlist-table">
-                <thead>
-                    <tr>
-                        <th class="col-symbol">Sembol</th>
-                        <th class="col-price">Fiyat</th>
-                        <th class="col-change">Değ. %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="watchlist-item" data-price="42.21">
-                        <td><span class="symbol">DXY</span></td>
-                        <td class="price">42.21</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="39590.65">
-                        <td><span class="symbol">DJI</span></td>
-                        <td class="price">39,590.65</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="5837.91">
-                        <td><span class="symbol">SPX</span></td>
-                        <td class="price">5,837.91</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="19.80">
-                        <td><span class="symbol">VIX</span></td>
-                        <td class="price">19.80</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="231.67">
-                        <td><span class="symbol">AAPL</span></td>
-                        <td class="price">231.67</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="759.44">
-                        <td><span class="symbol">NFLX</span></td>
-                        <td class="price">759.44</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="259.52">
-                        <td><span class="symbol">TSLA</span></td>
-                        <td class="price">259.52</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="2780.55">
-                        <td><span class="symbol">GOLD</span></td>
-                        <td class="price">2,780.55</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="34.13">
-                        <td><span class="symbol">SILVER</span></td>
-                        <td class="price">34.13</td>
-                        <td class="change">...</td>
-                    </tr>
-                    <tr class="watchlist-item" data-price="68.70">
-                        <td><span class="symbol">USOIL</span></td>
-                        <td class="price">68.70</td>
-                        <td class="change">...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="terminal-statusbar">
+            <span class="status-light"></span>
+            <span>Bağlandı</span>
         </div>
 
     </div>
@@ -292,54 +417,83 @@
     <script>
         // --- CANLI VERİ SİMÜLASYONU ---
 
+        // İzleme Listesini Güncelle
         function simulateWatchlistUpdate() {
             document.querySelectorAll('.watchlist-item').forEach(item => {
-                const priceElement = item.querySelector('.price');
+                const bidElement = item.querySelector('.bid');
+                const askElement = item.querySelector('.ask');
                 const changeElement = item.querySelector('.change');
                 
                 const basePrice = parseFloat(item.dataset.price);
-
-                // Fiyatta küçük bir dalgalanma yarat
-                const fluctuation = (Math.random() - 0.48) * (basePrice * 0.01); // %0.5'lik dalgalanma
+                const fluctuation = (Math.random() - 0.48) * (basePrice * 0.01);
                 const newPrice = (basePrice + fluctuation);
-                const priceChange = newPrice - basePrice;
-                const percentChange = (priceChange / basePrice) * 100;
+                const percentChange = ((newPrice - basePrice) / basePrice) * 100;
 
-                // Fiyatı formatla (çok büyük sayılarsa virgül kalsın)
                 const decimals = (basePrice.toString().split('.')[1] || '').length;
-                priceElement.textContent = newPrice.toLocaleString('tr-TR', { 
-                    minimumFractionDigits: decimals, 
-                    maximumFractionDigits: decimals 
-                });
                 
-                // Değişimi formatla
+                // Alış ve Satış fiyatları oluştur
+                const bidPrice = (newPrice * 0.999).toFixed(decimals);
+                const askPrice = (newPrice * 1.001).toFixed(decimals);
+                
+                bidElement.textContent = bidPrice;
+                askElement.textContent = askPrice;
+                
                 let changeText = `${percentChange.toFixed(2)}%`;
                 
-                // Renkleri ve animasyonları ayarla
                 item.classList.remove('flash-up', 'flash-down');
                 changeElement.classList.remove('up', 'down');
 
                 if (percentChange >= 0) {
                     changeElement.classList.add('up');
+                    bidElement.classList.add('up');
+                    askElement.classList.add('up');
                     changeText = `+${changeText}`;
+                    item.classList.add('flash-up');
                 } else {
                     changeElement.classList.add('down');
+                    bidElement.classList.add('down');
+                    askElement.classList.add('down');
+                    item.classList.add('flash-down');
                 }
                 
                 changeElement.textContent = changeText;
-
-                // Animasyonların tekrar çalışabilmesi için class'ları temizle
-                setTimeout(() => {
-                    item.classList.remove('flash-up', 'flash-down');
-                }, 700);
             });
         }
 
-        // Simülasyonu her 2 saniyede bir (2000 milisaniye) çalıştır
-        setInterval(simulateWatchlistUpdate, 2000);
+        // Piyasa Derinliğini Güncelle
+        function simulateDepthUpdate() {
+            const depthBody = document.getElementById('depth-body');
+            let html = '';
+            let basePrice = 9980;
+
+            for (let i = 0; i < 8; i++) {
+                let bidPrice = (basePrice - i * 5).toFixed(0);
+                let bidAmount = Math.floor(Math.random() * 150) + 10;
+                let askPrice = (basePrice + 5 + i * 5).toFixed(0);
+                let askAmount = Math.floor(Math.random() * 150) + 10;
+                
+                html += `
+                    <tr>
+                        <td>${bidAmount}</td>
+                        <td class="depth-bid">${bidPrice}</td>
+                        <td class="depth-ask">${askPrice}</td>
+                        <td>${askAmount}</td>
+                    </tr>
+                `;
+            }
+            depthBody.innerHTML = html;
+        }
+
+        // Simülasyonları Başlat
+        setInterval(() => {
+            simulateWatchlistUpdate();
+            simulateDepthUpdate();
+        }, 1500); // 1.5 saniyede bir güncelle
         
-        // Sayfa ilk yüklendiğinde de bir kez çalıştır
-        document.addEventListener('DOMContentLoaded', simulateWatchlistUpdate);
+        document.addEventListener('DOMContentLoaded', () => {
+            simulateWatchlistUpdate();
+            simulateDepthUpdate();
+        });
     </script>
 
 </body>
