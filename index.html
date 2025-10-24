@@ -3,233 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Borsa Ekranı</title>
+    <title>Finans Terminali</title>
     <style>
-        /* --- TEMEL STİLLER --- */
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #202020;
+            --border-color: #444;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --color-up: #00c853;     /* Yeşil */
+            --color-down: #ff3d00;   /* Kırmızı */
+            --color-up-bg: rgba(0, 200, 83, 0.15);
+            --color-down-bg: rgba(255, 61, 0, 0.15);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212; /* Koyu tema arka planı */
-            color: #e0e0e0; /* Açık renk yazı */
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
 
-        /* --- ANA KUTU --- */
-        .stock-market {
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid #333;
-            border-radius: 10px;
-            background-color: #1e1e1e; /* İçerik arka planı */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            overflow: hidden; /* Köşeler için */
+        /* --- ANA EKRAN DÜZENİ (GRID) --- */
+        .terminal-container {
+            display: grid;
+            height: 95vh;
+            grid-template-columns: 320px 1fr 300px; /* Sol | Orta | Sağ */
+            grid-template-rows: 250px 1fr;         /* Üst | Alt */
+            grid-template-areas:
+                "main-markets chart indices"
+                "detailed-list chart feed";
+            gap: 10px;
         }
 
-        /* --- BAŞLIK --- */
-        .market-header {
-            padding: 20px;
-            border-bottom: 1px solid #333;
-            background-color: #2a2a2a;
-        }
-        
-        .market-header h1 {
-            margin: 0;
-            color: #ffffff;
-            text-align: center;
-            font-size: 24px;
-        }
-
-        /* --- HİSSE LİSTESİ BAŞLIKLARI --- */
-        .stock-list-header {
+        /* --- GENEL PANEL STİLİ --- */
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden; /* İçeriğin taşmasını engelle */
             display: flex;
-            justify-content: space-between;
-            padding: 15px 20px;
-            border-bottom: 1px solid #333;
-            color: #9e9e9e; /* Başlıklar için soluk renk */
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 10px 12px;
             font-weight: bold;
-            font-size: 14px;
+            color: #fff;
+            background-color: #333;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .panel-content {
+            padding: 10px;
+            overflow-y: auto; /* Gerektiğinde kaydırma çubuğu */
         }
         
-        .header-name { flex-basis: 30%; }
-        .header-price { flex-basis: 30%; text-align: right; }
-        .header-change { flex-basis: 40%; text-align: right; }
+        /* --- ALANLARI GRID'E YERLEŞTİRME --- */
+        #main-markets { grid-area: main-markets; }
+        #detailed-list { grid-area: detailed-list; }
+        #chart { grid-area: chart; }
+        #indices { grid-area: indices; }
+        #feed { grid-area: feed; }
 
-        /* --- HİSSE LİSTESİ --- */
-        .stock-list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
+        /* --- 1. SOL ÜST: ANA PİYASALAR --- */
+        #main-markets .panel-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
-
-        /* --- TEK BİR HİSSE SATIRI --- */
-        .stock-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            transition: background-color 0.2s;
+        .market-card {
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            padding: 12px;
+            border-left: 4px solid var(--border-color);
         }
-
-        .stock-item:last-child {
-            border-bottom: none;
-        }
-
-        .stock-item:hover {
-            background-color: #2c2c2c;
-        }
-
-        .stock-name {
-            flex-basis: 30%;
-            font-weight: 600;
-            font-size: 1.1em;
+        .market-card .symbol {
+            font-size: 14px;
+            font-weight: bold;
             color: #fff;
         }
-        
-        .stock-price {
-            flex-basis: 30%;
-            font-size: 1.1em;
-            text-align: right;
+        .market-card .price {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        .market-card .change {
+            font-size: 14px;
             font-weight: 500;
         }
 
-        .stock-change {
-            flex-basis: 40%;
-            text-align: right;
-            font-weight: 600;
-            font-size: 1.1em;
+        /* --- 2. SOL ALT: DETAYLI LİSTE --- */
+        #detailed-list .panel-content {
+            padding: 0;
+        }
+        .list-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .list-table th, .list-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .list-table th {
+            font-size: 12px;
+            color: var(--text-muted);
+            background-color: #2a2a2a;
+            position: sticky; top: 0; /* Başlık satırı sabit kalsın */
+        }
+        .list-table td {
+            font-size: 14px;
+        }
+        .list-table .symbol { font-weight: bold; color: #fff; }
+        .list-table .change { text-align: right; font-weight: 500; }
+        .list-table .price { text-align: right; }
+        
+        /* --- 3. ORTA: GRAFİK ALANI --- */
+        #chart .panel-content {
+            background-image: url('https://i.imgur.com/8vQJ8yE.png'); /* Statik grafik görseli */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
-        /* --- RENK KODLAMASI (ÖNEMLİ) --- */
-        .change-up {
-            color: #4CAF50; /* Yeşil */
+        /* --- 4. SAĞ ÜST: ENDEKSLER --- */
+        #indices .panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .index-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 8px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+        }
+        .index-item .symbol { font-weight: bold; color: #fff; }
+        .index-item .price { font-size: 16px; }
+        .index-item .change { font-size: 14px; }
+        
+        /* --- 5. SAĞ ALT: HABER AKIŞI --- */
+        #feed .panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .feed-item .meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .feed-item .meta .author {
+            font-weight: bold;
+            color: #4fc3f7; /* Mavi renk */
+        }
+        .feed-item .text {
+            font-size: 14px;
+            line-height: 1.4;
         }
         
-        .change-down {
-            color: #F44336; /* Kırmızı */
-        }
-
-        /* --- FİYAT GÜNCELLEME EFEKTİ --- */
+        /* --- ARTIŞ/AZALIŞ RENKLERİ --- */
+        .up { color: var(--color-up); }
+        .down { color: var(--color-down); }
+        
+        /* --- ANİMASYONLU PARLAMA EFEKTİ --- */
         .flash-up {
             animation: flash-green 0.7s ease-out;
         }
-        
         .flash-down {
             animation: flash-red 0.7s ease-out;
         }
-
         @keyframes flash-green {
-            0% { background-color: rgba(76, 175, 80, 0.3); }
+            0% { background-color: var(--color-up-bg); }
             100% { background-color: transparent; }
         }
-
         @keyframes flash-red {
-            0% { background-color: rgba(244, 67, 54, 0.3); }
+            0% { background-color: var(--color-down-bg); }
             100% { background-color: transparent; }
         }
-
     </style>
 </head>
 <body>
 
-    <div class="stock-market">
-        <header class="market-header">
-            <h1>Canlı Borsa</h1>
-        </header>
+    <div class="terminal-container">
 
-        <div class="stock-list-header">
-            <span class="header-name">Hisse</span>
-            <span class="header-price">Fiyat (TL)</span>
-            <span class="header-change">Günlük Değişim</span>
+        <div id="main-markets" class="panel">
+            <div class="panel-header">DÜNYA PİYASALARI MAJOR</div>
+            <div class="panel-content">
+                <div class="market-card" data-symbol="USD" data-price="3.5439">
+                    <div class="symbol">USD/TRY</div>
+                    <div class="price">3.5439</div>
+                    <div class="change">...</div>
+                </div>
+                <div class="market-card" data-symbol="EUR" data-price="3.8967">
+                    <div class="symbol">EUR/TRY</div>
+                    <div class="price">3.8967</div>
+                    <div class="change">...</div>
+                </div>
+                <div class="market-card" data-symbol="XAU" data-price="1228.67">
+                    <div class="symbol">ALTIN (ONS)</div>
+                    <div class="price">1228.67</div>
+                    <div class="change">...</div>
+                </div>
+                <div class="market-card" data-symbol="GRM" data-price="140.0460">
+                    <div class="symbol">GRAM ALTIN</div>
+                    <div class="price">140.0460</div>
+                    <div class="change">...</div>
+                </div>
+            </div>
         </div>
 
-        <ul class="stock-list">
-            
-            <li class="stock-item" data-symbol="GARAN">
-                <span class="stock-name">GARAN</span>
-                <span class="stock-price" data-price="105.50">105.50</span>
-                <span class="stock-change change-up" data-change="0">+0.00 (0.00%)</span>
-            </li>
+        <div id="detailed-list" class="panel">
+            <div class="panel-header">DÖVİZ KURLARI</div>
+            <div class="panel-content">
+                <table class="list-table">
+                    <thead>
+                        <tr>
+                            <th>Sembol</th>
+                            <th class="price">Fiyat</th>
+                            <th class="change">Değişim (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-symbol="GBP" data-price="4.5893">
+                            <td class="symbol">GBP/TRY</td>
+                            <td class="price">4.5893</td>
+                            <td class="change">...</td>
+                        </tr>
+                        <tr data-symbol="RUS" data-price="0.0610">
+                            <td class="symbol">RUS/TRY</td>
+                            <td class="price">0.0610</td>
+                            <td class="change">...</td>
+                        </tr>
+                        <tr data-symbol="AUD" data-price="2.6241">
+                            <td class="symbol">AUD/TRY</td>
+                            <td class="price">2.6241</td>
+                            <td class="change">...</td>
+                        </tr>
+                        <tr data-symbol="SAR" data-price="0.9427">
+                            <td class="symbol">SAR/TRY</td>
+                            <td class="price">0.9427</td>
+                            <td class="change">...</td>
+                        </tr>
+                        <tr data-symbol="CAD" data-price="2.5985">
+                            <td class="symbol">CAD/TRY</td>
+                            <td class="price">2.5985</td>
+                            <td class="change">...</td>
+                        </tr>
+                        <tr data-symbol="CNY" data-price="0.5121">
+                            <td class="symbol">CNY/TRY</td>
+                            <td class="price">0.5121</td>
+                            <td class="change">...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="chart" class="panel">
+            <div class="panel-header">Euro/Dolar Grafiği</div>
+            <div class="panel-content">
+                </div>
+        </div>
 
-            <li class="stock-item" data-symbol="THYAO">
-                <span class="stock-name">THYAO</span>
-                <span class="stock-price" data-price="302.25">302.25</span>
-                <span class="stock-change change-down" data-change="0">-0.00 (0.00%)</span>
-            </li>
+        <div id="indices" class="panel">
+            <div class="panel-header">ENDEKSLER</div>
+            <div class="panel-content">
+                <div class="index-item" data-symbol="XU100" data-price="98582">
+                    <span class="symbol">BIST 100</span>
+                    <span class="price">98,582</span>
+                    <span class="change">...</span>
+                </div>
+                <div class="index-item" data-symbol="BRKM" data-price="98.53">
+                    <span class="symbol">BRKM</span>
+                    <span class="price">98.53</span>
+                    <span class="change">...</span>
+                </div>
+                <div class="index-item" data-symbol="SÜ.PİY." data-price="49.33">
+                    <span class="symbol">SÜ.PİY.</span>
+                    <span class="price">49.33</span>
+                    <span class="change">...</span>
+                </div>
+            </div>
+        </div>
 
-            <li class="stock-item" data-symbol="EREGL">
-                <span class="stock-name">EREGL</span>
-                <span class="stock-price" data-price="42.80">42.80</span>
-                <span class="stock-change change-up" data-change="0">+0.00 (0.00%)</span>
-            </li>
+        <div id="feed" class="panel">
+            <div class="panel-header">YORUM & AKIŞ</div>
+            <div class="panel-content">
+                <div class="feed-item">
+                    <div class="meta"><span class="author">ASIVEMAVI</span> - 13:28</div>
+                    <div class="text">Demokratlar meclisi alıyor, demokratlar daha yoğunlukla 28 geçer bence...</div>
+                </div>
+                <div class="feed-item">
+                    <div class="meta"><span class="author">Yatırımcı</span> - 13:25</div>
+                    <div class="text">Piyasalarda, sade vatandaşın gözünden yorumlandığı bu kanalda, yatırım danışmanlığı hizmeti verilmemektedir.</div>
+                </div>
+                <div class="feed-item">
+                    <div class="meta"><span class="author">ASIVEMAVI</span> - 13:22</div>
+                    <div class="text">Bilgimiz yokken fikrimiz olmasın, takip edip öğrenelim.</div>
+                </div>
+            </div>
+        </div>
 
-            <li class="stock-item" data-symbol="KCHOL">
-                <span class="stock-name">KCHOL</span>
-                <span class="stock-price" data-price="245.00">245.00</span>
-                <span class="stock-change change-up" data-change="0">+0.00 (0.00%)</span>
-            </li>
-
-            <li class="stock-item" data-symbol="TUPRS">
-                <span class="stock-name">TUPRS</span>
-                <span class="stock-price" data-price="171.40">171.40</span>
-                <span class="stock-change change-down" data-change="0">-0.00 (0.00%)</span>
-            </li>
-        </ul>
     </div>
 
     <script>
         // --- CANLI VERİ SİMÜLASYONU ---
 
-        // Bu fonksiyon, tüm hisse senedi satırlarını bulur ve fiyatlarını rastgele günceller
-        function updateStockPrices() {
+        function simulateUpdate() {
+            // Ana Piyasa Kartlarını Güncelle
+            document.querySelectorAll('#main-markets .market-card').forEach(updateElement);
             
-            // Tüm 'stock-item' class'lı satırları seç
-            document.querySelectorAll('.stock-item').forEach(item => {
-                
-                // Gerekli HTML elementlerini bul
-                const priceElement = item.querySelector('.stock-price');
-                const changeElement = item.querySelector('.stock-change');
-                
-                // 'data-price' etiketinde sakladığımız mevcut (veya başlangıç) fiyatı al
-                const basePrice = parseFloat(priceElement.getAttribute('data-price'));
-
-                // Fiyatta küçük bir dalgalanma yarat (%1 yukarı veya aşağı)
-                const fluctuation = (Math.random() - 0.5) * (basePrice * 0.02);
-                const newPrice = basePrice + fluctuation;
-                const priceChange = newPrice - basePrice;
-                const percentChange = (priceChange / basePrice) * 100;
-
-                // Yeni fiyatı ve değişimi ekrana yaz
-                priceElement.textContent = newPrice.toFixed(2); // 2 ondalık basamak
-                
-                // Renkleri ve animasyonları ayarla
-                changeElement.classList.remove('change-up', 'change-down', 'flash-up', 'flash-down');
-
-                if (priceChange >= 0) {
-                    // Fiyat ARTTI
-                    changeElement.classList.add('change-up');
-                    changeElement.textContent = `+${priceChange.toFixed(2)} (${percentChange.toFixed(2)}%)`;
-                    item.classList.add('flash-up'); // Yeşil animasyon
-                } else {
-                    // Fiyat DÜŞTÜ
-                    changeElement.classList.add('change-down');
-                    changeElement.textContent = `${priceChange.toFixed(2)} (${percentChange.toFixed(2)}%)`;
-                    item.classList.add('flash-down'); // Kırmızı animasyon
-                }
-
-                // Animasyonların tekrar çalışabilmesi için kısa bir süre sonra class'ları temizle
-                setTimeout(() => {
-                    item.classList.remove('flash-up', 'flash-down');
-                }, 700);
-            });
+            // Detaylı Listeyi Güncelle
+            document.querySelectorAll('#detailed-list .list-table tbody tr').forEach(updateElement);
+            
+            // Endeksleri Güncelle
+            document.querySelectorAll('#indices .index-item').forEach(updateElement);
         }
 
-        // 'updateStockPrices' fonksiyonunu her 2 saniyede bir (2000 milisaniye) çalıştır
-        setInterval(updateStockPrices, 2000);
+        function updateElement(item) {
+            const priceElement = item.querySelector('.price');
+            const changeElement = item.querySelector('.change');
+            
+            // Başlangıç fiyatını 'data-price' etiketinden al
+            const basePrice = parseFloat(item.dataset.price);
+
+            // Fiyatta küçük bir dalgalanma yarat
+            const fluctuation = (Math.random() - 0.48) * (basePrice * 0.01); // %0.5'lik dalgalanma
+            const newPrice = (basePrice + fluctuation);
+            const priceChange = newPrice - basePrice;
+            const percentChange = (priceChange / basePrice) * 100;
+
+            // Fiyatı ve yüzdeyi ekrana yaz
+            // Fiyatın ondalık basamak sayısını koru
+            const decimals = (basePrice.toString().split('.')[1] || '').length;
+            priceElement.textContent = newPrice.toFixed(decimals);
+            
+            changeElement.textContent = `${percentChange.toFixed(2)}%`;
+            
+            // Renkleri ve animasyonları ayarla
+            item.classList.remove('flash-up', 'flash-down');
+            changeElement.classList.remove('up', 'down');
+
+            if (priceChange >= 0) {
+                changeElement.classList.add('up');
+                item.classList.add('flash-up');
+            } else {
+                changeElement.classList.add('down');
+                item.classList.add('flash-down');
+            }
+
+            // Animasyonların tekrar çalışabilmesi için class'ları temizle
+            setTimeout(() => {
+                item.classList.remove('flash-up', 'flash-down');
+            }, 700);
+        }
+
+        // Simülasyonu her 1.5 saniyede bir (1500 milisaniye) çalıştır
+        setInterval(simulateUpdate, 1500);
         
         // Sayfa ilk yüklendiğinde de bir kez çalıştır
-        document.addEventListener('DOMContentLoaded', updateStockPrices);
-
+        document.addEventListener('DOMContentLoaded', simulateUpdate);
     </script>
+
 </body>
 </html>
